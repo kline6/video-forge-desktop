@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>口播视频工作流</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#e5e7eb;min-height:100vh}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px}
+h1{font-size:1.6rem;margin-bottom:6px;background:linear-gradient(135deg,#22c55e,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block}
+.subtitle{font-size:.85rem;color:#94a3b8;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+.tab{padding:10px 22px;border-radius:10px;border:1px solid rgba(148,163,184,.25);cursor:pointer;font-size:.9rem;transition:.2s}
+.tab.active{border-color:#22c55e;background:rgba(34,197,94,.12);color:#86efac}
+.tab:hover{background:rgba(255,255,255,.04)}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px;margin-bottom:18px}
+.card h3{font-size:1rem;margin-bottom:14px;color:#cbd5e1}
+label{display:block;font-size:.82rem;color:#94a3b8;margin-bottom:5px}
+textarea{width:100%;height:130px;background:#0b1220;color:#e5e7eb;border:1px solid rgba(148,163,184,.25);border-radius:10px;padding:12px;font-size:.9rem;resize:vertical;line-height:1.5}
+textarea:focus{outline:none;border-color:#38bdf8}
+select,input[type=text],input[type=number]{width:100%;background:#0b1220;color:#e5e7eb;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:9px 10px;font-size:.88rem}
+select:focus,input:focus{outline:none;border-color:#38bdf8}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.field{margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 28px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,#22c55e,#38bdf8);color:#052e16}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,197,94,.3)}
+.btn-secondary{background:rgba(148,163,184,.12);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+.btn-secondary:hover{background:rgba(148,163,184,.2)}
+.btn-row{display:flex;gap:10px;margin-top:8px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:10px 12px;color:#64748b;font-weight:600;border-bottom:1px solid rgba(255,255,255,.06);font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-queued{background:rgba(59,130,246,.15);color:#60a5fa}
+.badge-running{background:rgba(234,179,8,.15);color:#facc15}
+.badge-done{background:rgba(34,197,94,.15);color:#4ade80}
+.badge-error{background:rgba(239,68,68,.15);color:#f87171}
+.pbar{width:100%;height:7px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#22c55e,#38bdf8);transition:width .4s ease}
+.steps{display:flex;gap:4px;margin-top:6px}
+.step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.1)}
+.step-dot.done{background:#22c55e}
+.step-dot.running{background:#facc15;animation:pulse .8s infinite alternate}
+@keyframes pulse{from{opacity:.5}to{opacity:1}}
+.hidden{display:none}
+.drop-zone{border:2px dashed rgba(148,163,184,.25);border-radius:12px;padding:28px;text-align:center;color:#64748b;font-size:.85rem;cursor:pointer;transition:.2s}
+.drop-zone:hover{border-color:#38bdf8;color:#94a3b8}
+.drop-zone.dragover{border-color:#22c55e;background:rgba(34,197,94,.05)}
+.log-box{background:#020617;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;font-family:"Cascadia Code","Fira Code",monospace;font-size:.82rem;max-height:220px;overflow-y:auto;line-height:1.6;white-space:pre-wrap}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:999;transform:translateX(120%);transition:.3s;pointer-events:none}
+.toast.show{transform:translateX(0)}
+.toast-ok{background:#052e16;border:1px solid #22c55e;color:#4ade80}
+.toast-err{background:#2e0505;border:1px solid #ef4444;color:#f87171}
+.key-area textarea{height:70px;font-size:.82rem}
+.stats{display:flex;gap:16px;margin-bottom:18px}
+.stat{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 18px;flex:1;text-align:center}
+.stat-num{font-size:1.5rem;font-weight:700;color:#f1f5f9}
+.stat-label{font-size:.75rem;color:#64748b;margin-top:2px}
+.dl-btn{display:inline-block;color:#4ade80;font-size:.8rem;padding:4px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;text-decoration:none;cursor:pointer}
+.dl-btn:hover{background:rgba(34,197,94,.25)}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}.tabs{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>口播视频工作流系统</h1>
+<p class="subtitle">一键批量生成口播视频 | 支持自动生成数字人 / 已有素材合成两种模式</p>
+<div class="stats" id="statsBar">
+<div class="stat"><div class="stat-num" id="sTotal">0</div><div class="stat-label">总任务</div></div>
+<div class="stat"><div class="stat-num" id="sRunning" style="color:#facc15">0</div><div class="stat-label">运行中</div></div>
+<div class="stat"><div class="stat-num" id="sDone" style="color:#4ade80">0</div><div class="stat-label">已完成</div></div>
+<div class="stat"><div class="stat-num" id="sError" style="color:#f87171">0</div><div class="stat-label">失败</div></div>
+</div>
+<div class="tabs" id="modeTabs">
+<div class="tab active" data-mode="auto">模式A：自动生成数字人 + 视频</div>
+<div class="tab" data-mode="existing">模式B：已有素材合成视频</div>
+</div>
+<div id="panelAuto" class="card">
+<h3>模式A：输入文案，自动生成数字人口播视频</h3>
+<div class="field"><label>口播文案（每行一条，支持批量）</label>
+<textarea id="aScripts" placeholder="你好，欢迎关注我的频道..."></textarea></div>
+<div class="grid3">
+<div class="field"><label>视频时长(秒)</label><input type="number" id="aDuration" value="45" /></div>
+<div class="field"><label>画面比例</label><select id="aRatio"><option>9:16</option><option>16:9</option><option>1:1</option></select></div>
+<div class="field"><label>数字人风格</label><select id="aAvatar"><option value="realistic">实风格</option><option value="anime">动漫风格</option><option value="3d">3D风格</option></select></div>
+</div>
+<div class="grid2 key-area">
+<div class="field"><label>API Keys（每行一个，用于轮询）</label><textarea id="aKeys" placeholder="sk-key1"></textarea></div>
+<div class="field"><label>Key轮询策略</label><select id="aKeyStrategy"><option value="every10">每10条换一个Key</option><option value="round_robin">逐条轮询</option></select>
+<label style="margin-top:10px">TTS引擎</label><select id="aTts"><option value="elevenlabs">ElevenLabs</option><option value="gptsovits">GPT-SoVITS</option><option value="azure">Azure TTS</option></select></div>
+</div>
+<div class="btn-row"><button class="btn btn-primary" id="btnAuto">生成并提交工作流</button><button class="btn btn-secondary" id="btnClearAuto">清空</button></div>
+</div>
+<div id="panelExisting" class="card">
+<h3>数字人口播视频生成</h3>
+<p style="font-size:.82rem;color:#64748b;margin-bottom:14px">提供照片 + 音频 + 文案，生成数字人口播视频（D驱动口型 + 文案字幕）</p>
+
+<div class="grid3">
+<div class="field">
+<label>① 数字人照片</label>
+<div class="drop-zone" id="dropAvatar">点击或拖拽上传<br/><small>照片(JPG/PNG) 或 视频(MP4)</small></div>
+<input type="file" id="fileAvatar" accept="image/*,video/*" style="display:none" />
+<div id="avatarFiles" style="margin-top:6px;font-size:.8rem;color:#94a3b8"></div>
+</div>
+<div class="field">
+<label>② 你的音频</label>
+<div class="drop-zone" id="dropAudio">点击或拖拽上传音频<br/><small>MP3 / WAV / M4A</small></div>
+<input type="file" id="fileAudio" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/*" style="display:none" />
+<div id="audioFiles" style="margin-top:6px;font-size:.8rem;color:#94a3b8"></div>
+</div>
+<div class="field">
+<label>③ 口播文案</label>
+<textarea id="didScript" placeholder="输入口播文案...&#10;每行一条，用于生成字幕" style="height:110px"></textarea>
+</div>
+</div>
+
+<!-- D-ID 高级配置 -->
+<div style="background:rgba(0,0,0,.2);border-radius:10px;padding:14px;margin-top:10px">
+<h3 style="font-size:.85rem;margin-bottom:12px;color:#94a3b8">⚙️ D-ID 模型与配置</h3>
+<div class="grid3">
+<div class="field">
+<label>驱动模型 (Driver)</label>
+<select id="didDriver">
+<option value="bank://natural/">自然动画（推荐）</option>
+<option value="bank://lively">活泼风格</option>
+<option value="bank://neutral">中性风格</option>
+<option value="bank://natural/driver-3/original">自然 V3</option>
+</select>
+</div>
+<div class="field">
+<label>运动幅度</label>
+<select id="didMotion">
+<option value="1">标准 (1x)</option>
+<option value="0.5">轻微 (0.5x)</option>
+<option value="1.5">夸张 (1.5x)</option>
+<option value="2">极夸张 (2x)</option>
+</select>
+</div>
+<div class="field">
+<label>表情风格</label>
+<select id="didExpression"><option value="">默认</option><option value="happy">微笑</option><option value="serious">严肃</option><option value="surprised">惊讶</option></select>
+</div>
+</div>
+<div class="grid3" style="margin-top:8px">
+<div class="field">
+<label>缝合模式 (Stitch)</label>
+<select id="didStitch"><option value="true">开启 - 更自然</option><option value="false">关闭</option></select>
+</div>
+<div class="field">
+<label>锡化 / 降噪</label>
+<select id="didNoise"><option value="false">关闭</option><option value="true">开启降噪</option></select>
+</div>
+<div class="field">
+<label>字幕大小</label>
+<select id="subSize"><option value="36">标准</option><option value="48">较大</option><option value="28">较小</option></select>
+</div>
+</div>
+<div class="grid2" style="margin-top:8px">
+<div class="field">
+<label>音频填充 (Pad Audio)</label>
+<select id="didPad"><option value="0">无填充</option><option value="0.5">0.5秒</option><option value="1">1秒</option></select>
+</div>
+<div class="field">
+<label>对齐扩展系数</label>
+<select id="didExpand"><option value="0.3">标准 (0.3)</option><option value="0.5">较大 (0.5)</option><option value="0.1">较小 (0.1)</option></select>
+</div>
+</div>
+</div>
+
+<div class="btn-row" style="margin-top:14px">
+<button class="btn btn-primary" id="btnExisting">生成数字人视频</button>
+<button class="btn btn-secondary" id="btnClearExisting">清空</button>
+</div>
+</div>
+
+</div>
+<div class="card" style="margin-top:20px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin-bottom:0">任务列表</h3><button class="btn btn-secondary" id="btnRefresh" style="padding:6px 14px;font-size:.8rem">刷新</button></div>
+<div class="table-wrap"><table>
+<thead><tr><th>任务ID</th><th>模式</th><th>进度</th><th>步骤</th><th>状态</th><th>操作</th><th>时间</th></tr></thead>
+<tbody id="jobTable"><tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px">暂无任务，提交后自动显示</td></tr></tbody>
+</table></div></div>
+<div class="card" style="margin-top:14px"><h3>操作日志</h3><div class="log-box" id="logBox">系统就绪，等待操作...
+</div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var currentMode="auto";var pollTimer=null;
+
+var S_DONE="已完成";
+var S_RUNNING="运行中";
+var S_FAIL="失败";
+var S_QUEUED="排队中";
+var M_AUTO="自动生成";
+var M_EXIST="素材合成";
+var EMPTY="暂无任务";
+var FILES_SEL="已选: ";
+var TOAST_INPUT="请输入至少一条文案";
+var TOAST_UPLOAD="请上传数字人素材和音频";
+var TOAST_SUBMIT_OK="提交成功！";
+var TOAST_CLEAR="已清空";
+var TOAST_NET="网络错误: ";
+var LOG_SUBMIT="提交任务: ";
+var LOG_DONE="所有任务已完成";
+var LOG_UPLOADING="上传素材中...";
+var LOG_UPLOADED="素材上传完成";
+
+document.getElementById("modeTabs").addEventListener("click", function(e) {
+  var t = e.target.closest("[data-mode]");
+  if (!t) return;
+  currentMode = t.dataset.mode;
+  document.querySelectorAll(".tab").forEach(function(d){d.classList.remove("active")});
+  t.classList.add("active");
+  if (currentMode === "existing") {
+    document.getElementById("panelExisting").scrollIntoView({behavior:"smooth"});
+  } else {
+    document.getElementById("panelAuto").scrollIntoView({behavior:"smooth"});
+  }
+});
+
+function showFiles(el, files) {
+  if (!files || files.length === 0) {el.textContent = ""; return;}
+  var names = [];
+  for (var i = 0; i < files.length; i++) names.push(files[i].name + " (" + (files[i].size/1024).toFixed(1) + "KB)");
+  el.textContent = FILES_SEL + names.join(", ");
+}
+
+function setupDrop(zoneId, inputId, displayId) {
+  var zone = document.getElementById(zoneId);
+  var input = document.getElementById(inputId);
+  var display = document.getElementById(displayId);
+  if (!zone || !input || !display) { console.warn("Missing element:", zoneId, inputId, displayId); return; }
+  // Store files reference for drag-and-drop
+  var _files = null;
+  // Click to open file dialog
+  zone.addEventListener("click", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    input.value = "";
+    input.click();
+  });
+  // Drag events
+  zone.addEventListener("dragenter", function(e) { e.preventDefault(); e.stopPropagation(); zone.classList.add("dragover"); });
+  zone.addEventListener("dragover", function(e) { e.preventDefault(); e.stopPropagation(); zone.classList.add("dragover"); });
+  zone.addEventListener("dragleave", function(e) { e.preventDefault(); e.stopPropagation(); zone.classList.remove("dragover"); });
+  zone.addEventListener("drop", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove("dragover");
+    _files = e.dataTransfer.files;
+    showFiles(display, _files);
+    // Also set to input via DataTransfer
+    try {
+      var dt = new DataTransfer();
+      for (var i = 0; i < _files.length; i++) dt.items.add(_files[i]);
+      input.files = dt.files;
+    } catch(ex) { console.log("DataTransfer not supported, using stored ref"); }
+  });
+  // File input change
+  input.addEventListener("change", function() {
+    _files = input.files;
+    showFiles(display, input.files);
+  });
+  // Expose getter for submit
+  zone._getFiles = function() { return _files || input.files; };
+}
+setupDrop("dropAvatar","fileAvatar","avatarFiles");
+setupDrop("dropAvatar2","fileAvatar2","avatarFiles2");
+setupDrop("dropAudio","fileAudio","audioFiles");
+
+function log(msg) {
+  var box = document.getElementById("logBox");
+  var now = new Date().toLocaleTimeString("zh-CN");
+  box.textContent += "[" + now + "] " + msg + "\n";
+  box.scrollTop = box.scrollHeight;
+}
+
+function toastFn(msg, ok) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + (ok ? "toast-ok" : "toast-err") + " show";
+  setTimeout(function(){t.classList.remove("show")}, 2500);
+}
+
+// Upload files first, then submit job
+async function uploadFiles(avatarFile, audioFile) {
+  log(LOG_UPLOADING);
+  var fd = new FormData();
+  if (avatarFile) fd.append("avatar", avatarFile);
+  if (audioFile) fd.append("audio", audioFile);
+  var res = await fetch("/api/upload", { method: "POST", body: fd });
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || "upload failed");
+  log(LOG_UPLOADED);
+  return data;
+}
+
+async function submitAuto() {
+  var scripts = (document.getElementById("aScripts").value || "").split(/\r?\n/).map(function(s){return s.trim()}).filter(Boolean);
+  if (scripts.length === 0) {toastFn(TOAST_INPUT, false); return;}
+  var keys = (document.getElementById("aKeys").value || "").split(/\r?\n/).map(function(s){return s.trim()}).filter(Boolean);
+  var cfg = {project:"video_workflow",mode:"auto",inputs:{scripts:scripts,duration_sec:Number(document.getElementById("aDuration").value||45),ratio:document.getElementById("aRatio").value,avatar_style:document.getElementById("aAvatar").value,tts_engine:document.getElementById("aTts").value,api_keys:keys,key_strategy:document.getElementById("aKeyStrategy").value}};
+  await doSubmit(cfg, scripts.length);
+}
+
+async function submitExisting() {
+  var avatarInput = document.getElementById("fileAvatar");
+  var audioInput = document.getElementById("fileAudio");
+  var avatarFile = avatarInput && avatarInput.files && avatarInput.files[0];
+  var audioFile = audioInput && audioInput.files && audioInput.files[0];
+  var scriptText = document.getElementById("didScript").value.trim();
+  if (!avatarFile) { toastFn("\u8bf7\u70b9\u51fb\u4e0a\u4f20\u6570\u5b57\u4eba\u7167\u7247", false); return; }
+  if (!audioFile) { toastFn("\u8bf7\u70b9\u51fb\u4e0a\u4f20\u97f3\u9891", false); return; }
+  if (!scriptText) { toastFn("\u8bf7\u8f93\u5165\u53e3\u64ad\u6587\u6848", false); return; }
+  try {
+    log("\u4e0a\u4f20\u7167\u7247\u548c\u97f3\u9891...");
+    var fd = new FormData();
+    fd.append("avatar", avatarFile);
+    fd.append("audio", audioFile);
+    var upRes = await fetch("/api/upload", { method: "POST", body: fd });
+    var upData = await upRes.json();
+    if (!upRes.ok) throw new Error(upData.error || "upload failed");
+    log("\u4e0a\u4f20\u5b8c\u6210: " + (upData.avatar_path || "") + " + " + (upData.audio_path || ""));
+    var cfg = {
+      project: "video_workflow",
+      mode: "existing",
+      avatar_path: upData.avatar_path,
+      audio_path: upData.audio_path,
+      script_text: scriptText,
+      avatar_type: avatarFile.type && avatarFile.type.startsWith("video") ? "video" : "image",
+      did_driver: document.getElementById("didDriver").value,
+      did_motion: Number(document.getElementById("didMotion").value),
+      expression: document.getElementById("didExpression").value || null,
+      stitch: document.getElementById("didStitch").value === "true",
+      reduce_noise: document.getElementById("didNoise").value === "true",
+      pad_audio: Number(document.getElementById("didPad").value),
+      align_expand: Number(document.getElementById("didExpand").value),
+      subtitle_size: Number(document.getElementById("subSize").value || 36)
+    };
+    log("\u63d0\u4ea4D-ID\u4efb\u52a1...");
+    var res = await fetch("/api/jobs", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)});
+    var data = await res.json();
+    if (res.ok) {
+      toastFn("\u4efb\u52a1\u5df2\u63d0\u4ea4\uff01D-ID\u6b63\u5728\u751f\u6210...", true);
+      refreshJobs(); startPoll();
+    } else { toastFn("\u63d0\u4ea4\u5931\u8d25: " + (data.error||""), false); }
+  } catch(err) { toastFn("\u9519\u8bef: " + err.message, false); log(err.message); }
+}
+
+
+async function doSubmit(cfg, count) {
+  var url = count > 1 ? "/api/batch" : "/api/jobs";
+  var body = count > 1 ? {mode:cfg.mode,inputs:cfg.inputs} : cfg;
+  log(LOG_SUBMIT + count + "条");
+  try {
+    var res = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    var data = await res.json();
+    if (res.ok) {
+      toastFn(TOAST_SUBMIT_OK, true);
+      refreshJobs();
+      startPoll();
+    } else {
+      toastFn("提交失败", false);
+    }
+  } catch(err) {
+    toastFn(TOAST_NET + err.message, false);
+    log("异常: " + err.message);
+  }
+}
+
+async function refreshJobs() {
+  try {
+    var res = await fetch("/api/jobs");
+    var list = await res.json();
+    renderJobs(list);
+  } catch(err) { log("刷新失败: " + err.message); }
+}
+
+function renderJobs(list) {
+  var tbody = document.getElementById("jobTable");
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px">' + EMPTY + '</td></tr>';
+    updateStats(list);
+    return;
+  }
+  var html = '';
+  for (var i = list.length - 1; i >= 0; i--) {
+    var j = list[i];
+    var badgeCls = j.status === "done" ? "badge-done" : j.status === "running" ? "badge-running" : j.status === "error" ? "badge-error" : "badge-queued";
+    var statusText = j.status === "done" ? S_DONE : j.status === "running" ? S_RUNNING : j.status === "error" ? S_FAIL : S_QUEUED;
+    var modeText = j.mode === "auto" ? M_AUTO : M_EXIST;
+    var time = j.created_at ? new Date(j.created_at).toLocaleTimeString("zh-CN") : "-";
+    var shortId = j.job_id.substring(0, 8);
+    var stepCount = 5;
+    var dots = '';
+    for (var s = 0; s < stepCount; s++) {
+      var cls = "step-dot";
+      if (s < (j.current_step || 0)) cls += " done";
+      else if (s === j.current_step && j.status === "running") cls += " running";
+      dots += '<div class="' + cls + '"></div>';
+    }
+    var actionHtml = '';
+    if (j.status === "done") {
+      actionHtml = '<a class="dl-btn" href="/api/download/' + j.job_id + '">\u2b07 \u4e0b\u8f7d\u89c6\u9891</a>';
+    } else if (j.status === "error") {
+      actionHtml = '<span style="color:#f87171;font-size:.75rem">\u274c \u5931\u8d25</span>';
+    }
+    html += '<tr>';
+    html += '<td title="' + j.job_id + '">' + shortId + '</td>';
+    html += '<td>' + modeText + '</td>';
+    html += '<td><div class="pbar"><div class="pbar-fill" style="width:' + j.progress + '%"></div></div><small>' + j.progress + '%</small></td>';
+    html += '<td><div class="steps">' + dots + '</div></td>';
+    html += '<td><span class="badge ' + badgeCls + '">' + statusText + '</span></td>';
+    html += '<td>' + actionHtml + '</td>';
+    html += '<td>' + time + '</td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+  updateStats(list);
+}
+
+function updateStats(list) {
+  list = list || [];
+  document.getElementById("sTotal").textContent = list.length;
+  var r2=0,d2=0,e2=0;
+  list.forEach(function(j){if(j.status==="running"||j.status==="queued")r2++;if(j.status==="done")d2++;if(j.status==="error")e2++;});
+  document.getElementById("sRunning").textContent=r2;
+  document.getElementById("sDone").textContent=d2;
+  document.getElementById("sError").textContent=e2;
+}
+
+function startPoll() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async function(){
+    await refreshJobs();
+    try {var res=await fetch("/api/jobs");var list=await res.json();var allDone=list.every(function(j){return j.status==="done"||j.status==="error"});if(allDone&&list.length>0){clearInterval(pollTimer);pollTimer=null;log(LOG_DONE);}}catch(e){}
+  }, 3000);
+}
+
+function clearForm(mode) {
+  if (mode==="auto") {document.getElementById("aScripts").value="";document.getElementById("aKeys").value="";}
+  else {document.getElementById("bScripts").value="";document.getElementById("fileAvatar").value="";document.getElementById("fileAudio").value="";document.getElementById("avatarFiles").textContent="";document.getElementById("audioFiles").textContent="";}
+  toastFn(TOAST_CLEAR, true);
+}
+
+document.getElementById("btnAuto").addEventListener("click", submitAuto);
+document.getElementById("btnClearAuto").addEventListener("click", function(){clearForm("auto")});
+document.getElementById("btnExisting").addEventListener("click", submitExisting);
+document.getElementById("btnClearExisting").addEventListener("click", function(){clearForm("existing")});
+document.getElementById("btnRefresh").addEventListener("click", refreshJobs);
+refreshJobs();
+</script>
+</body>
+</html>
